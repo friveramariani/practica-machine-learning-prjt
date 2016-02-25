@@ -1,0 +1,66 @@
+---
+title: "Untitled"
+author: "Felix E. Rivera-Mariani, PhD"
+date: "February 25, 2016"
+output: pdf_document
+---
+###Summary
+The purpose of this project is to determine how well 6 participants perform a particular activity based on accelometers data on belt, forearm, arm, and dumbell. This will be accomplished in this report by a random forest classifier algorithm. 
+
+The Caret package for subsetting the data, prepare a training subset, and cross validate the model. 
+
+```{r, cache=TRUE}
+library(caret)
+library(randomForest)
+
+# Global training data downloaded training data
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "./prjt-pml-training.csv")
+
+data.training <- read.csv("./prjt-pml-training.csv")
+
+na <- apply(data.training, 2, function(x) sum(x %in% c(NA, "")))
+na
+```
+
+At this point, there are 152 variables because 8 "house keeping" variables were removed. Nevertheless, **there seems that some of the variables may contain a few data points (i.e. data sparsness).** These will be removed to avoid affecting the predictive value of the model. 
+```{r, cache=TRUE}
+index <- which(na == 0)
+
+data.training <- data.training[,index]
+
+data.training <- data.training[,8:60]
+```
+
+**The random forest algorithim** will be used because of the following:
+
+1) Can handle large number of inputs
+2) Provide a cross-validation component 
+3) Can handle variables both categorial and unscalled
+4) Can be used to estimate variable importance
+5) Provides a probability output
+
+A portion of the training subset (10%) will be used to determine the variables of importance. 
+```{r, cache=TRUE}
+model <- randomForest(classe~., data = data.training)
+pred <- predict(model, data.training)
+confusionMatrix(data.training$classe, pred)
+```
+
+
+```{r}
+# Apply model to a different data subset
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "./prjt-pml-testing.csv")
+
+data.testing <- read.csv("./prjt-pml-testing.csv")
+data.testing <- data.testing[,index]
+data.testing<- data.testing[,8:59]
+data.testing$classe <- factor(nrow(data.testing))
+levels(data.testing$classe) <- levels(data.testing$classe)
+Test2 <- rbind(data.training[1,], data.testing) 
+Test2 <- Test2[2:21,]
+```
+
+```{r}
+TestModel <- predict(model, Test2)
+TestModel
+```
