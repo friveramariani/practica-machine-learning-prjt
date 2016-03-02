@@ -1,0 +1,87 @@
+---
+title: "Practical Machine Learning Project"
+author: "Felix E. Rivera-Mariani, PhD"
+date: "February 25, 2016"
+output: html_document
+---
+###Summary
+The purpose of this project is to determine how well 6 participants perform a particular activity based on accelometers data on belt, forearm, arm, and dumbell. This will be accomplished in this report by a random forest classifier algorithm. 
+
+The github repository is found at the following link: https://github.com/friveramariani/practica-machine-learning-prjt.git
+
+The Caret package for subsetting the data, prepare a training subset, and cross validate the model. 
+
+```{r, cache=TRUE}
+library(caret)
+library(randomForest)
+# Global data was previously downloaded into my pc
+# Global training data loaded
+data.training <- read.csv("./prjt-pml-training.csv")
+
+na <- apply(data.training, 2, function(x) sum(x %in% c(NA, "")))
+```
+
+At this point, there are 152 variables because 8 "house keeping" variables were removed. Nevertheless, **there seems that some of the variables may contain a few data points (i.e. data sparsness).** These will be removed to avoid affecting the predictive value of the model. 
+```{r, cache=TRUE}
+index <- which(na == 0)
+
+## remove observations with NA in the training dataset
+
+data.training <- data.training[,index]
+
+data.training <- data.training[,8:60]
+```
+
+**The random forest algorithim** will be used because of the following:
+
+1) Can handle large number of inputs
+2) Provide a cross-validation component 
+3) Can handle variables both categorial and unscalled
+4) Can be used to estimate variable importance
+5) Provides a probability output
+
+A portion of the training subset (10%) will be used to determine the variables of importance. 
+```{r, cache=TRUE}
+
+## construct a model with the training dataset using the random forect algorithim
+model <- randomForest(classe~., data = data.training)
+
+## create predictions using the model constructed with the training dataset
+pred <- predict(model, data.training)
+confusionMatrix(data.training$classe, pred)
+```
+**The accuracy is 99.8%, thus my predicted accuracy for the out-of-sample error is 0.2%.**
+
+This is an excellent result, so rather than trying additional algorithms, I will use Random Forests to predict on the test set.
+
+```{r}
+# Apply model to a different data subset
+
+library(randomForest)
+
+## The testing dataset was previously downloaded into the pc
+## The testin dataset is loaded
+data.testing <- read.csv("./prjt-pml-testing.csv")
+
+## Similar to the training dataset, any observations with NAs were removed
+data.testing <- data.testing[,index]
+data.testing<- data.testing[,8:59]
+
+## Make sure classe variabe is as factor
+data.testing$classe <- factor(nrow(data.testing))
+
+## The class factor is releleved
+levels(data.testing$classe) <- levels(data.testing$classe)
+
+# Merge the training and dataset by the 1st row
+Test2 <- rbind(data.training[1,], data.testing)
+
+# perform the test on the with observations found on rows 2 to 21
+Test2 <- Test2[2:21,]
+```
+
+```{r}
+# Perform predictions on the testing dataset with the radom forest created with the training dataset
+TestModel <- predict(model, Test2)
+TestModel
+```
